@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BMSIT & M - Edge AI DevKit Simulator</title>
+    <style>
+        :root {
+            --bg-color: #f4f6f9;
+            --sidebar-bg: #ffffff;
+            --text-main: #333333;
+            --text-muted: #6c757d;
+            --accent-primary: #0056b3;
+            --accent-hover: #004494;
+            --board-face: #ffffff;
+            --wood-trim: #dcb386;
+            --border-light: #e9ecef;
+            --pico-green: #2e8b57;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 380px;
+            background-color: var(--sidebar-bg);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            border-right: 1px solid var(--border-light);
+            box-shadow: 2px 0 10px rgba(0,0,0,0.03);
+            overflow-y: auto;
+            z-index: 10;
+        }
+
+        .workspace {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            background-color: var(--bg-color);
+        }
+
+        h2 { font-size: 1.1rem; color: #212529; border-bottom: 2px solid var(--accent-primary); padding-bottom: 4px; display: inline-block;}
+        p { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; }
+        
+        select, button {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 6px;
+            border: 1px solid #ced4da;
+            background-color: #fff;
+            color: #495057;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        select:focus { border-color: var(--accent-primary); outline: none; box-shadow: 0 0 0 3px rgba(0,123,255,0.1); }
+        
+        button.run-btn { background-color: var(--accent-primary); color: white; border: none; font-weight: 600; }
+        button.run-btn:hover { background-color: var(--accent-hover); }
+        button.run-btn.running { background-color: #dc3545; }
+        
+        button.reset-btn { background-color: #e2e6ea; color: #333; font-size: 0.85rem; font-weight: 500; border: none; }
+        button.reset-btn:hover { background-color: #dae0e5; }
+
+        .panel-box {
+            background-color: #f8f9fa;
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid var(--border-light);
+        }
+
+        .slider-container { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+        input[type="range"] { width: 100%; accent-color: var(--accent-primary); }
+
+        .terminal {
+            background-color: #212529;
+            font-family: 'Consolas', 'Courier New', monospace;
+            padding: 12px;
+            border-radius: 6px;
+            height: 130px;
+            overflow-y: auto;
+            font-size: 0.8rem;
+            color: #a8e6cf;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+            white-space: pre-wrap;
+        }
+
+        .code-container {
+            background-color: #f1f3f5;
+            padding: 12px;
+            border-radius: 6px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 0.8rem;
+            white-space: pre-wrap;
+            color: #343a40;
+            border: 1px solid #ced4da;
+            /* Layout Safe Resizability */
+            resize: vertical;
+            overflow: auto;
+            min-height: 150px;
+            max-height: 400px; 
+        }
+
+        .kit-frame {
+            background-color: var(--wood-trim);
+            padding: 18px;
+            border-radius: 12px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.15), inset 0 0 10px rgba(139,90,43,0.3);
+            position: relative;
+        }
+
+        .kit-board {
+            width: 800px;
+            height: 580px;
+            background-color: var(--board-face);
+            border-radius: 4px;
+            position: relative;
+            box-shadow: inset 0 0 12px rgba(0,0,0,0.05);
+            border: 1px solid #ccc;
+            user-select: none;
+        }
+
+        .brand-text {
+            position: absolute;
+            top: 25px;
+            left: 260px;
+            text-align: center;
+            color: #333;
+        }
+        .brand-text h1 { font-size: 1.3rem; letter-spacing: 0.5px; border-bottom: none; color: #212529;}
+        .brand-text p { font-size: 0.8rem; font-weight: bold; color: #666; }
+
+        .pin {
+            width: 10px;
+            height: 10px;
+            background: #dcdcdc;
+            border: 2px solid #888;
+            border-radius: 50%;
+            position: absolute;
+            cursor: pointer;
+            z-index: 100;
+            transition: all 0.1s ease;
+        }
+        .pin:hover {
+            transform: scale(1.4);
+            background: #ffeb3b !important;
+            border-color: #fbc02d;
+        }
+        .pin.selected {
+            background: #00d2ff !important;
+            border-color: #0088cc;
+            box-shadow: 0 0 6px rgba(0,210,255,0.6);
+        }
+        .pin-label {
+            position: absolute;
+            font-size: 0.55rem;
+            color: #555;
+            pointer-events: none;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        #wire-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 95; }
+
+        .module {
+            position: absolute;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        #mod-pico {
+            top: 150px; left: 35px; width: 80px; height: 200px;
+            background-color: var(--pico-green);
+            border: 1px solid #1e6b3f;
+            color: white;
+            box-shadow: 0 4px 8px rgba(46,139,87,0.3);
+        }
+        #mod-pico .label {
+            font-size: 0.7rem; text-align: center; margin-top: 75px; 
+            font-weight: bold; transform: rotate(-90deg); color: #fff; letter-spacing: 1px;
+        }
+
+        #mod-seven-seg {
+            top: 35px; left: 35px; width: 110px; height: 45px;
+            background-color: #f8f9fa; border: 2px solid #dee2e6;
+            display: flex; align-items: center; justify-content: center; gap: 4px;
+        }
+        .seg-digit { color: #e9ecef; font-family: monospace; font-size: 1.8rem; font-weight: bold; letter-spacing: 1px; text-shadow: 0 0 2px rgba(0,0,0,0.1);}
+        .seg-digit.active { color: #dc3545; text-shadow: 0 0 4px rgba(220,53,69,0.4); }
+
+        #mod-dc-motor { top: 30px; left: 520px; width: 120px; height: 100px; background: none; border: none; box-shadow: none; }
+        .dc-body { width: 40px; height: 40px; background: #e9ecef; border-radius: 50%; border: 2px solid #adb5bd; margin: 0 auto; position: relative; top: 15px;}
+        .dc-shaft { width: 6px; height: 6px; background: #f59f00; border-radius: 50%; position: absolute; top:15px; left:15px; }
+        .wheel {
+            width: 80px; height: 80px; border-radius: 50%; border: 6px dashed #343a40;
+            background: #ffc107; position: absolute; top: -5px; left: 20px; z-index: 10;
+        }
+
+        #mod-ntc {
+            top: 250px; left: 260px; width: 55px; height: 45px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            font-size: 0.55rem; font-weight: bold; color: #495057; background: #f8f9fa;
+        }
+        .ntc-bead { width: 8px; height: 12px; background: #6c757d; border-radius: 4px 4px 2px 2px; }
+
+        #mod-stepper {
+            top: 400px; left: 270px; width: 110px; height: 110px;
+            background: #e9ecef; border-radius: 50%; border: 4px solid #ced4da;
+        }
+        .stepper-pointer {
+            width: 4px; height: 45px; background: #e03131; position: absolute;
+            top: 10px; left: 49px; transform-origin: bottom center; border-radius: 2px;
+        }
+
+        #mod-servo { top: 420px; left: 520px; width: 90px; height: 50px; background: #339af0; border: 1px solid #228be6; }
+        .servo-horn {
+            width: 60px; height: 14px; background: #fff; border-radius: 7px;
+            position: absolute; top: 18px; left: 15px; transform-origin: 15px 7px;
+            border: 1px solid #adb5bd;
+        }
+
+        .header-block {
+            position: absolute; background: #f1f3f5; padding: 4px; display: flex; 
+            border-radius: 4px; border: 1px solid #ced4da;
+        }
+        .header-label { position: absolute; font-size: 0.55rem; color: #495057; font-weight: 700; white-space: nowrap; }
+
+        #mod-buck {
+            top: 370px; left: 35px; width: 90px; height: 55px; background: #4dabf7; border: 1px solid #339af0; padding: 4px; color: white;
+        }
+        .buck-title { font-size: 0.55rem; text-align: center; font-weight: 700; margin-bottom: 2px; color: #fff;}
+        .buck-pin-txt { position: absolute; font-size:0.45rem; color:white; font-weight:bold;}
+
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div>
+            <h2>Lab Experiment</h2>
+            <p style="margin-top: 4px; margin-bottom: 8px;">Select a logic sequence:</p>
+            <select id="program-select" onchange="loadProgram()">
+                <option value="9">Program 9: Temp-Controlled Fan (DC Motor)</option>
+                <option value="10">Program 10: Accelerometer Stepper Sweep</option>
+                <option value="12">Program 12: Vehicle Wiper System (Servo)</option>
+            </select>
+        </div>
+
+        <div class="panel-box" id="runtime-controls">
+            <h2 style="border:none;">Simulation Engine</h2>
+            <div style="display: flex; gap: 10px; margin-top: 10px; margin-bottom: 10px;">
+                <button class="run-btn" id="run-btn" onclick="toggleSimulation()">Run Script</button>
+                <button class="reset-btn" onclick="resetWires()">Clear Wires</button>
+            </div>
+            <div id="dynamic-input" class="slider-container"></div>
+        </div>
+
+        <div>
+            <h2 style="border:none;">Diagnostics Terminal</h2>
+            <div class="terminal" id="serial-terminal">Ready. Awaiting layout logic execution...</div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; flex: 1;">
+            <h2 style="border:none; margin-bottom: 5px;">MicroPython View</h2>
+            <div class="code-container" id="code-view"></div>
+        </div>
+    </div>
+
+    <div class="workspace">
+        <div class="kit-frame">
+            <div class="kit-board" id="board">
+                <svg id="wire-layer"></svg>
+
+                <div class="brand-text">
+                    <h1>Edge-AI-DevKit Platform</h1>
+                    <p>BMSIT & M • Hardware Simulator</p>
+                </div>
+
+                <div id="mod-pico" class="module">
+                    <div class="label">Raspberry Pi Pico W</div>
+                    <div class="pin" id="pico-gp0" style="top: 15px; left: -5px;" title="GP0"></div>
+                    <div class="pin-label" style="top: 13px; left: 12px; color:white;">GP0</div>
+                    <div class="pin" id="pico-gp1" style="top: 35px; left: -5px;" title="GP1"></div>
+                    <div class="pin-label" style="top: 33px; left: 12px; color:white;">GP1</div>
+                    <div class="pin" id="pico-gp2" style="top: 55px; left: -5px;" title="GP2"></div>
+                    <div class="pin-label" style="top: 53px; left: 12px; color:white;">GP2</div>
+
+                    <div class="pin" id="pico-gp14" style="top: 140px; left: -5px;" title="GP14 (Pin 19)"></div>
+                    <div class="pin-label" style="top: 138px; left: 12px; color:#ffeb3b;">GP14</div>
+                    <div class="pin" id="pico-gp15" style="top: 160px; left: -5px;" title="GP15 (Pin 20)"></div>
+                    <div class="pin-label" style="top: 158px; left: 12px; color:#ffeb3b;">GP15</div>
+
+                    <div class="pin" id="pico-gp16" style="top: 160px; left: 73px;" title="GP16 (Pin 21)"></div>
+                    <div class="pin-label" style="top: 158px; left: 40px; color:#ffeb3b;">GP16</div>
+                    <div class="pin" id="pico-gp17" style="top: 140px; left: 73px;" title="GP17 (Pin 22)"></div>
+                    <div class="pin-label" style="top: 138px; left: 40px; color:#ffeb3b;">GP17</div>
+                    
+                    <div class="pin" id="pico-gnd" style="top: 120px; left: 73px;" title="GND (Pin 23)"></div>
+                    <div class="pin-label" style="top: 118px; left: 46px; color:white;">GND</div>
+
+                    <div class="pin" id="pico-gp26" style="top: 55px; left: 73px;" title="GP26 / ADC0 (Pin 31)"></div>
+                    <div class="pin-label" style="top: 53px; left: 40px; color:#ffeb3b;">GP26</div>
+                    <div class="pin" id="pico-3v3" style="top: 15px; left: 73px;" title="3V3 (Pin 36)"></div>
+                    <div class="pin-label" style="top: 13px; left: 46px; color:white;">3V3</div>
+                </div>
+
+                <div id="mod-seven-seg" class="module">
+                    <div class="seg-digit" id="seg-0">0</div><div class="seg-digit" id="seg-1">0</div>
+                    <div class="seg-digit" id="seg-2">0</div><div class="seg-digit" id="seg-3">0</div>
+                </div>
+
+                <div id="mod-dc-motor" class="module">
+                    <div class="wheel" id="dc-wheel"></div>
+                    <div class="dc-body"><div class="dc-shaft"></div></div>
+                </div>
+
+                <div id="mod-ntc" class="module">
+                    <div class="ntc-bead"></div><div>NTC</div>
+                </div>
+
+                <div id="mod-stepper" class="module">
+                    <div class="stepper-pointer" id="stepper-arm"></div>
+                </div>
+
+                <div id="mod-servo" class="module">
+                    <div class="servo-horn" id="servo-horn"></div>
+                </div>
+
+                <div id="mod-buck" class="module">
+                    <div class="buck-title">DC BUCK (2502E)</div>
+                    <div class="pin" id="buck-in-pos" style="top: 15px; left: -5px;" title="Buck IN+"></div>
+                    <div class="buck-pin-txt" style="top: 14px; left: 10px;">IN+</div>
+                    <div class="pin" id="buck-in-neg" style="top: 35px; left: -5px;" title="Buck IN-"></div>
+                    <div class="buck-pin-txt" style="top: 34px; left: 10px;">IN-</div>
+                    <div class="pin" id="buck-out-pos" style="top: 15px; left: 83px;" title="Buck OUT+"></div>
+                    <div class="buck-pin-txt" style="top: 14px; left: 55px;">OUT+</div>
+                    <div class="pin" id="buck-out-neg" style="top: 35px; left: 83px;" title="Buck OUT-"></div>
+                    <div class="buck-pin-txt" style="top: 34px; left: 55px;">OUT-</div>
+                </div>
+
+                <div class="header-block" style="top: 370px; left: 155px; width: 60px; height: 18px;">
+                    <div class="pin" id="hdr-e3v1" style="top: 3px; left: 5px;" title="E3V1 Pin 2"></div>
+                    <div class="pin" id="hdr-e5v1" style="top: 3px; left: 40px;" title="E5V1 Pin 15"></div>
+                </div>
+                <div class="header-label" style="top: 358px; left: 155px;">E3V1(2) &nbsp;&nbsp;&nbsp; E5V1(15)</div>
+
+                <div class="header-block" style="top: 420px; left: 155px; width: 85px; height: 18px;">
+                    <div class="pin" id="hdr-egnd-p1" style="top: 3px; left: 5px;" title="EGND1 Pin 1"></div>
+                    <div class="pin" id="hdr-egnd-p2" style="top: 3px; left: 25px;" title="EGND1 Pin 2"></div>
+                    <div class="pin" id="hdr-egnd-p3" style="top: 3px; left: 45px;" title="EGND1 Pin 3"></div>
+                    <div class="pin" id="hdr-egnd-p4" style="top: 3px; left: 65px;" title="EGND1 Pin 4"></div>
+                </div>
+                <div class="header-label" style="top: 408px; left: 155px;">EGND1 (P1-P4)</div>
+
+                <div class="header-block" style="top: 130px; left: 380px; width: 125px; height: 18px;">
+                    <div class="pin" id="hdr-mot-p1" style="top: 3px; left: 5px;" title="MOT_CON1 Pin 1"></div>
+                    <div class="pin" id="hdr-mot-p2" style="top: 3px; left: 25px;" title="MOT_CON1 Pin 2"></div>
+                    <div class="pin" id="hdr-mot-p3" style="top: 3px; left: 45px;" title="MOT_CON1 Pin 3"></div>
+                    <div class="pin" id="hdr-mot-p4" style="top: 3px; left: 65px;" title="MOT_CON1 Pin 4"></div>
+                    <div class="pin" id="hdr-mot-p5" style="top: 3px; left: 85px;" title="MOT_CON1 Pin 5"></div>
+                    <div class="pin" id="hdr-mot-p6" style="top: 3px; left: 105px;" title="MOT_CON1 Pin 6"></div>
+                </div>
+                <div class="header-label" style="top: 115px; left: 380px;">MOT_CON1 (1 to 6)</div>
+
+                <div class="header-block" style="top: 365px; left: 275px; width: 105px; height: 18px;">
+                    <div class="pin" id="hdr-stp-p1" style="top: 3px; left: 5px;" title="STPMP1 Pin 1"></div>
+                    <div class="pin" id="hdr-stp-p2" style="top: 3px; left: 25px;" title="STPMP1 Pin 2"></div>
+                    <div class="pin" id="hdr-stp-p3" style="top: 3px; left: 45px;" title="STPMP1 Pin 3 (GND)"></div>
+                    <div class="pin" id="hdr-stp-p4" style="top: 3px; left: 65px;" title="STPMP1 Pin 4"></div>
+                    <div class="pin" id="hdr-stp-p5" style="top: 3px; left: 85px;" title="STPMP1 Pin 5"></div>
+                </div>
+                <div class="header-label" style="top: 350px; left: 275px;">STPMP1 (1 to 5)</div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const programs = {
+            "9": {
+                name: "Program 9: Temp-Controlled DC Motor Fan",
+                connections: [
+                    { from: "hdr-mot-p2", to: "pico-gp15", label: "MOT_CON1 Pin 2 <-> GP15" },
+                    { from: "hdr-mot-p4", to: "pico-gp16", label: "MOT_CON1 Pin 4 <-> GP16" }
+                ],
+                code: "# Program 9\nfrom machine import ADC, Pin\nimport time\n\nntc = ADC(26)\nin1 = Pin(15, Pin.OUT)\nin2 = Pin(16, Pin.OUT)\n\nwhile True:\n    value = ntc.read_u16()\n    print(\"Temp:\", value)\n    if value > 9100:\n        in1.on()\n        in2.on()\n        print(\"Motor ON\")\n    else:\n        in1.off()\n        in2.off()\n        print(\"Motor OFF\")\n    time.sleep(1)",
+                inputs: "<label style='font-size:0.85rem; font-weight:600;'>NTC Thermistor Input (ADC):</label>\n<input type=\"range\" id=\"ntc-slider\" min=\"5000\" max=\"12000\" value=\"7200\" oninput=\"updateUI()\">\n<div style=\"display:flex; justify-content:space-between; font-size:0.75rem; color:#6c757d;\"><span>Cold</span><span id=\"slider-val\">7200</span><span>Hot</span></div>"
+            },
+            "10": {
+                name: "Program 10: Accelerometer Stepper Sweep",
+                connections: [
+                    { from: "hdr-e3v1", to: "buck-out-pos", label: "E3V1(Pin 2) <-> BUCK OUT+" },
+                    { from: "hdr-e5v1", to: "buck-in-pos", label: "E5V1(Pin 15) <-> BUCK IN+" },
+                    { from: "hdr-egnd-p1", to: "buck-out-neg", label: "EGND1(Pin 1) <-> BUCK OUT-" },
+                    { from: "hdr-egnd-p2", to: "buck-in-neg", label: "EGND1(Pin 2) <-> BUCK IN-" },
+                    { from: "hdr-egnd-p3", to: "hdr-stp-p3", label: "EGND1(Pin 3) <-> STPMP1(Pin 3)" },
+                    { from: "hdr-egnd-p4", to: "pico-gnd", label: "EGND1(Pin 4) <-> Pico GND" },
+                    { from: "hdr-stp-p1", to: "pico-gp16", label: "STPMP1(Pin 1) <-> GP16" },
+                    { from: "hdr-stp-p2", to: "pico-gp17", label: "STPMP1(Pin 2) <-> GP17" },
+                    { from: "hdr-stp-p4", to: "pico-gp15", label: "STPMP1(Pin 4) <-> GP15" },
+                    { from: "hdr-stp-p5", to: "pico-gp14", label: "STPMP1(Pin 5) <-> GP14" }
+                ],
+                code: "# Program 10\nfrom machine import Pin\nimport utime\n\nstep = Pin(15, Pin.OUT)\ndir = Pin(14, Pin.OUT)\nres = Pin(16, Pin.OUT)\nslp = Pin(17, Pin.OUT)\n\nres.value(1)\nslp.value(1)\n\nwhile True:\n    print(\"Moving Clockwise\")\n    utime.sleep(3)\n    print(\"Moving Anti-Clockwise\")\n    utime.sleep(3)",
+                inputs: "<p style=\"color:#0056b3; font-size:0.85rem; font-weight:600;\">ℹ️ Hardware logic parses automatically on run.</p>"
+            },
+            "12": {
+                name: "Program 12: Vehicle Wiper System (Servo)",
+                connections: [
+                    { from: "hdr-mot-p4", to: "pico-gp16", label: "MOT_CON1 Pin 4 <-> GP16" },
+                    { from: "hdr-mot-p6", to: "pico-gp15", label: "MOT_CON1 Pin 6 <-> GP15" }
+                ],
+                code: "# Program 12\nfrom machine import Pin, PWM\nfrom time import sleep_ms\n\nservo = PWM(Pin(16))\nenable = Pin(15, Pin.OUT)\nenable.high()\nservo.freq(50)\n\nwhile True:\n    print(\"Wiper: Left\")\n    sleep_ms(500)\n    print(\"Wiper: Right\")\n    sleep_ms(500)",
+                inputs: "<p style=\"color:#0056b3; font-size:0.85rem; font-weight:600;\">ℹ️ 50Hz PWM Loop Auto-Execution.</p>"
+            }
+        };
+
+        let selectedPin = null;
+        let wires = [];
+        let isSimulating = false;
+        
+        // Loop Variables
+        let simInterval = null;
+        let animInterval = null;
+        let p9_motorRunning = false;
+        let currentAngle = 0;
+
+        window.onload = () => { loadProgram(); setupPins(); };
+
+        function loadProgram() {
+            stopSimulation();
+            const progId = document.getElementById("program-select").value;
+            document.getElementById("code-view").textContent = programs[progId].code;
+            document.getElementById("dynamic-input").innerHTML = programs[progId].inputs;
+            logTerminal(`[Loaded] ${programs[progId].name}`);
+        }
+
+        function updateUI() {
+            if(document.getElementById("ntc-slider")) {
+                document.getElementById("slider-val").textContent = document.getElementById("ntc-slider").value;
+            }
+        }
+
+        function logTerminal(message) {
+            const term = document.getElementById("serial-terminal");
+            term.innerHTML += `\n> ${message}`;
+            term.scrollTop = term.scrollHeight;
+        }
+
+        function setupPins() {
+            document.querySelectorAll('.pin').forEach(pin => {
+                pin.addEventListener('click', (e) => {
+                    e.stopPropagation(); handlePinClick(pin.id);
+                });
+            });
+            document.getElementById('board').addEventListener('click', () => {
+                if (selectedPin) { document.getElementById(selectedPin).classList.remove('selected'); selectedPin = null; }
+            });
+        }
+
+        function handlePinClick(pinId) {
+            if (!selectedPin) {
+                selectedPin = pinId; document.getElementById(pinId).classList.add('selected');
+            } else {
+                if (selectedPin === pinId) { document.getElementById(pinId).classList.remove('selected'); selectedPin = null; return; }
+                createWire(selectedPin, pinId);
+                document.getElementById(selectedPin).classList.remove('selected'); selectedPin = null;
+            }
+        }
+
+        function createWire(fromId, toId) {
+            if (wires.some(w => (w.from === fromId && w.to === toId) || (w.from === toId && w.to === fromId))) return;
+            const colors = ['#e03131', '#1971c2', '#2f9e44', '#f08c00', '#9c36b5'];
+            wires.push({ from: fromId, to: toId, color: colors[Math.floor(Math.random() * colors.length)] });
+            renderWires();
+        }
+
+        function renderWires() {
+            const svg = document.getElementById("wire-layer"); svg.innerHTML = ''; 
+            const boardRect = document.getElementById("board").getBoundingClientRect();
+            wires.forEach(wire => {
+                const elA = document.getElementById(wire.from); const elB = document.getElementById(wire.to);
+                if (elA && elB) {
+                    const rA = elA.getBoundingClientRect(); const rB = elB.getBoundingClientRect();
+                    const x1 = rA.left - boardRect.left + (rA.width/2); const y1 = rA.top - boardRect.top + (rA.height/2);
+                    const x2 = rB.left - boardRect.left + (rB.width/2); const y2 = rB.top - boardRect.top + (rB.height/2);
+                    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                    line.setAttribute("x1", x1); line.setAttribute("y1", y1);
+                    line.setAttribute("x2", x2); line.setAttribute("y2", y2);
+                    line.setAttribute("stroke", wire.color); line.setAttribute("stroke-width", "3"); line.setAttribute("stroke-linecap", "round");
+                    svg.appendChild(line);
+                }
+            });
+        }
+
+        function resetWires() { stopSimulation(); wires = []; renderWires(); logTerminal("Wires cleared."); }
+
+        function findMissingConnections(progId) {
+            const required = programs[progId].connections;
+            let missing = [];
+            required.forEach(req => {
+                let found = wires.some(w => (w.from === req.from && w.to === req.to) || (w.from === req.to && w.to === req.from));
+                if (!found) missing.push(req.label);
+            });
+            return missing;
+        }
+
+        function toggleSimulation() {
+            if (!isSimulating) {
+                const progId = document.getElementById("program-select").value;
+                const missing = findMissingConnections(progId);
+                
+                if (missing.length > 0) {
+                    logTerminal("❌ ERROR: Wiring Faults Detected!");
+                    missing.forEach(m => logTerminal("   Missing: " + m));
+                    return; // Abort run
+                }
+
+                isSimulating = true;
+                document.getElementById("run-btn").textContent = "Stop Script";
+                document.getElementById("run-btn").classList.add("running");
+                logTerminal("✅ System Wired Correctly. Running...");
+                startLogic(progId);
+            } else {
+                stopSimulation();
+            }
+        }
+
+        function stopSimulation() {
+            isSimulating = false;
+            document.getElementById("run-btn").textContent = "Run Script";
+            document.getElementById("run-btn").classList.remove("running");
+            clearInterval(simInterval); clearInterval(animInterval);
+            p9_motorRunning = false;
+            document.getElementById("dc-wheel").style.transform = "rotate(0deg)";
+            document.getElementById("stepper-arm").style.transform = "rotate(0deg)";
+            document.getElementById("servo-horn").style.transform = "rotate(0deg)";
+            document.querySelectorAll(".seg-digit").forEach(el => { el.classList.remove("active"); el.textContent = "0"; });
+        }
+
+        function startLogic(progId) {
+            if (progId === "9") {
+                // Fixed decouple logic for smooth spinning
+                simInterval = setInterval(() => {
+                    const val = parseInt(document.getElementById("ntc-slider").value);
+                    const digitStr = String(val).padStart(4, '0');
+                    for(let i=0; i<4; i++) {
+                        let el = document.getElementById(`seg-${i}`);
+                        el.textContent = digitStr[i]; el.classList.add("active");
+                    }
+                    if (val > 9100) {
+                        if(!p9_motorRunning) logTerminal(`Temp: ${val} - MOTOR ON`);
+                        p9_motorRunning = true;
+                    } else {
+                        if(p9_motorRunning) logTerminal(`Temp: ${val} - MOTOR OFF`);
+                        p9_motorRunning = false;
+                    }
+                }, 500);
+
+                animInterval = setInterval(() => {
+                    if (p9_motorRunning) {
+                        currentAngle += 15;
+                        document.getElementById("dc-wheel").style.transform = `rotate(${currentAngle}deg)`;
+                    }
+                }, 30);
+
+            } else if (progId === "10") {
+                let stateCW = true; logTerminal("Moving Clockwise");
+                animInterval = setInterval(() => {
+                    currentAngle += stateCW ? 2 : -2;
+                    document.getElementById("stepper-arm").style.transform = `rotate(${currentAngle}deg)`;
+                }, 30);
+                simInterval = setInterval(() => {
+                    stateCW = !stateCW; logTerminal(stateCW ? "Moving Clockwise" : "Moving Anti-Clockwise");
+                }, 3000);
+
+            } else if (progId === "12") {
+                let isLeft = true; logTerminal("Wiper: Left Side");
+                document.getElementById("servo-horn").style.transform = "rotate(20deg)";
+                simInterval = setInterval(() => {
+                    isLeft = !isLeft; logTerminal(isLeft ? "Wiper: Left Side" : "Wiper: Right Side");
+                    document.getElementById("servo-horn").style.transform = isLeft ? "rotate(20deg)" : "rotate(160deg)";
+                }, 500);
+            }
+        }
+    </script>
+</body>
+</html>
