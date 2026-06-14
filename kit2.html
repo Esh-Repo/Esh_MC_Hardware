@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BMSIT & M - Edge AI DevKit Simulator</title>
+    <title>MC Kit Simulation</title>
+    <link rel="icon" type="image/png" href="favicon1.png">
     <style>
         :root {
             --bg-color: #f4f6f9;
@@ -287,7 +288,7 @@
 
                 <div class="brand-text">
                     <h1>Edge-AI-DevKit Platform</h1>
-                    <p>BMSIT & M • Hardware Simulator</p>
+                    <p>Hardware Simulator</p>
                 </div>
 
                 <div id="mod-pico" class="module">
@@ -376,14 +377,17 @@
                 </div>
                 <div class="header-label" style="top: 115px; left: 380px;">MOT_CON1 (1 to 6)</div>
 
-                <div class="header-block" style="top: 365px; left: 275px; width: 105px; height: 18px;">
-                    <div class="pin" id="hdr-stp-p1" style="top: 3px; left: 5px;" title="STPMP1 Pin 1"></div>
-                    <div class="pin" id="hdr-stp-p2" style="top: 3px; left: 25px;" title="STPMP1 Pin 2"></div>
-                    <div class="pin" id="hdr-stp-p3" style="top: 3px; left: 45px;" title="STPMP1 Pin 3 (GND)"></div>
-                    <div class="pin" id="hdr-stp-p4" style="top: 3px; left: 65px;" title="STPMP1 Pin 4"></div>
-                    <div class="pin" id="hdr-stp-p5" style="top: 3px; left: 85px;" title="STPMP1 Pin 5"></div>
+                <div class="header-block" style="top: 365px; left: 275px; width: 165px; height: 18px;">
+                    <div class="pin" id="hdr-stp-p1" style="top: 3px; left: 5px;" title="Stepper Pin 1"></div>
+                    <div class="pin" id="hdr-stp-p2" style="top: 3px; left: 25px;" title="Stepper Pin 2"></div>
+                    <div class="pin" id="hdr-stp-p3" style="top: 3px; left: 45px;" title="Stepper Pin 3"></div>
+                    <div class="pin" id="hdr-stp-p4" style="top: 3px; left: 65px;" title="Stepper Pin 4"></div>
+                    <div class="pin" id="hdr-stp-p5" style="top: 3px; left: 85px;" title="Stepper Pin 5"></div>
+                    <div class="pin" id="hdr-stp-p6" style="top: 3px; left: 105px;" title="Stepper Pin 6"></div>
+                    <div class="pin" id="hdr-stp-p7" style="top: 3px; left: 125px;" title="Stepper Pin 7"></div>
+                    <div class="pin" id="hdr-stp-p8" style="top: 3px; left: 145px;" title="Stepper Pin 8"></div>
                 </div>
-                <div class="header-label" style="top: 350px; left: 275px;">STPMP1 (1 to 5)</div>
+                <div class="header-label" style="top: 350px; left: 275px;">STEPPER HDR (1 to 8)</div>
 
             </div>
         </div>
@@ -403,16 +407,10 @@
             "10": {
                 name: "Program 10: Accelerometer Stepper Sweep",
                 connections: [
-                    { from: "hdr-e3v1", to: "buck-out-pos", label: "E3V1(Pin 2) <-> BUCK OUT+" },
-                    { from: "hdr-e5v1", to: "buck-in-pos", label: "E5V1(Pin 15) <-> BUCK IN+" },
-                    { from: "hdr-egnd-p1", to: "buck-out-neg", label: "EGND1(Pin 1) <-> BUCK OUT-" },
-                    { from: "hdr-egnd-p2", to: "buck-in-neg", label: "EGND1(Pin 2) <-> BUCK IN-" },
-                    { from: "hdr-egnd-p3", to: "hdr-stp-p3", label: "EGND1(Pin 3) <-> STPMP1(Pin 3)" },
-                    { from: "hdr-egnd-p4", to: "pico-gnd", label: "EGND1(Pin 4) <-> Pico GND" },
-                    { from: "hdr-stp-p1", to: "pico-gp16", label: "STPMP1(Pin 1) <-> GP16" },
-                    { from: "hdr-stp-p2", to: "pico-gp17", label: "STPMP1(Pin 2) <-> GP17" },
-                    { from: "hdr-stp-p4", to: "pico-gp15", label: "STPMP1(Pin 4) <-> GP15" },
-                    { from: "hdr-stp-p5", to: "pico-gp14", label: "STPMP1(Pin 5) <-> GP14" }
+                    { from: "hdr-stp-p4", to: "pico-gp15", label: "Stepper HDR(Pin 4) <-> GP15" },
+                    { from: "hdr-stp-p5", to: "pico-gp14", label: "Stepper HDR(Pin 5) <-> GP14" },
+                    { from: "hdr-stp-p1", to: "pico-gp16", label: "Stepper HDR(Pin 1) <-> GP16" },
+                    { from: "hdr-stp-p2", to: "pico-gp17", label: "Stepper HDR(Pin 2) <-> GP17" }
                 ],
                 code: "# Program 10\nfrom machine import Pin\nimport utime\n\nstep = Pin(15, Pin.OUT)\ndir = Pin(14, Pin.OUT)\nres = Pin(16, Pin.OUT)\nslp = Pin(17, Pin.OUT)\n\nres.value(1)\nslp.value(1)\n\nwhile True:\n    print(\"Moving Clockwise\")\n    utime.sleep(3)\n    print(\"Moving Anti-Clockwise\")\n    utime.sleep(3)",
                 inputs: "<p style=\"color:#0056b3; font-size:0.85rem; font-weight:600;\">ℹ️ Hardware logic parses automatically on run.</p>"
